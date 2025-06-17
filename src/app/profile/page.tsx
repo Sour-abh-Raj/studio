@@ -1,27 +1,28 @@
+
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
-import type { Task } from '@/types/task';
+import type { Task } from '@/types/task'; // Ensure this uses the updated Task type
 import { db } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { format, parseISO, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 interface DailyAnalytics {
   date: string;
-  completed: number;
+  completed: number; // Specifically tasks marked as 'done'
   total: number;
   percentage: number;
 }
 
 const chartConfig = {
   completed: {
-    label: "Completed Tasks",
-    color: "hsl(var(--primary))",
+    label: "Tasks Done", // Changed from "Completed Tasks" to "Tasks Done" to match 'done' status
+    color: "hsl(var(--chart-4))", // Using the 'done' color from analytics page for consistency
   },
 } satisfies ChartConfig;
 
@@ -31,7 +32,7 @@ export default function ProfilePage() {
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (user && user.uid) {
       const fetchAnalytics = async () => {
         setIsLoadingAnalytics(true);
         const today = new Date();
@@ -45,20 +46,21 @@ export default function ProfilePage() {
           const q = query(tasksRef, where("date", "==", dateString));
           
           const querySnapshot = await getDocs(q);
-          let completedCount = 0;
+          let doneCount = 0; // Changed from completedCount
           const totalTasks = querySnapshot.size;
 
           querySnapshot.forEach(doc => {
-            if (doc.data().status === 'completed') {
-              completedCount++;
+            const taskData = doc.data() as Task; // Use Task type
+            if (taskData.status === 'done') { // Check for 'done' status
+              doneCount++;
             }
           });
           
           dailyData.push({
             date: format(targetDate, 'MMM d'), // Format for chart display
-            completed: completedCount,
+            completed: doneCount, // Represents 'done' tasks
             total: totalTasks,
-            percentage: totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0,
+            percentage: totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0,
           });
         }
         setAnalytics(dailyData);
@@ -95,7 +97,7 @@ export default function ProfilePage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline">Task Completion Analytics (Last 7 Days)</CardTitle>
-          <CardDescription>Overview of your task completion.</CardDescription>
+          <CardDescription>Overview of your tasks marked as 'done'.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoadingAnalytics ? (

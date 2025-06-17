@@ -5,7 +5,7 @@ import type { Task } from '@/types/task';
 import type { TaskData } from '@/lib/firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit3, Trash2, MoreVertical, ThumbsUp, Brain, CalendarCheck2 } from 'lucide-react';
+import { Edit3, Trash2, MoreVertical, ThumbsUp, Brain, CalendarCheck2, Briefcase } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,10 +27,11 @@ interface TaskItemProps {
   onDeleteTask: (taskId: string) => void;
 }
 
-const statusMap: Record<Task['status'], { label: string; icon: React.ElementType; colorClass: string }> = {
-  thought: { label: 'Thought', icon: Brain, colorClass: 'bg-blue-500 hover:bg-blue-600' },
-  planned: { label: 'Planned', icon: CalendarCheck2, colorClass: 'bg-yellow-500 hover:bg-yellow-600' },
-  done: { label: 'Done', icon: ThumbsUp, colorClass: 'bg-green-500 hover:bg-green-600' },
+const statusMap: Record<Task['status'], { label: string; icon: React.ElementType; colorClass: string; badgeVariant: "default" | "secondary" | "destructive" | "outline" }> = {
+  thought: { label: 'Thought', icon: Brain, colorClass: 'bg-blue-500 hover:bg-blue-600', badgeVariant: 'default' },
+  planned: { label: 'Planned', icon: CalendarCheck2, colorClass: 'bg-yellow-500 hover:bg-yellow-600 text-black', badgeVariant: 'default' },
+  working: { label: 'Working', icon: Briefcase, colorClass: 'bg-purple-500 hover:bg-purple-600', badgeVariant: 'default' },
+  done: { label: 'Done', icon: ThumbsUp, colorClass: 'bg-green-500 hover:bg-green-600', badgeVariant: 'secondary' },
 };
 
 export default function TaskItem({ task, onUpdateTask, onDeleteTask }: TaskItemProps) {
@@ -62,6 +63,7 @@ export default function TaskItem({ task, onUpdateTask, onDeleteTask }: TaskItemP
   };
 
   const CurrentStatusIcon = statusMap[task.status]?.icon || Brain;
+  const currentStatusInfo = statusMap[task.status];
 
   return (
     <Card className={`mb-3 transition-all duration-300 ease-in-out ${task.status === 'done' ? 'bg-muted/60 opacity-80' : 'bg-card hover:shadow-lg'}`}>
@@ -125,9 +127,11 @@ export default function TaskItem({ task, onUpdateTask, onDeleteTask }: TaskItemP
               )}
             </div>
             <div className="flex items-center gap-2 mt-2 sm:mt-0 self-end sm:self-center">
-              <Badge variant={task.status === 'done' ? 'secondary' : 'default'} className={`${statusMap[task.status]?.colorClass} text-white`}>
-                {statusMap[task.status]?.label}
-              </Badge>
+              {currentStatusInfo && (
+                <Badge variant={currentStatusInfo.badgeVariant} className={`${currentStatusInfo.colorClass} ${currentStatusInfo.colorClass.includes('yellow') ? 'text-black' : 'text-white'}`}>
+                  {currentStatusInfo.label}
+                </Badge>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="shrink-0">

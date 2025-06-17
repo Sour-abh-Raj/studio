@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -16,7 +17,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { auth } from '@/lib/firebase/config';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { LogOut, User as UserIcon, LayoutDashboard, BrainCircuit } from 'lucide-react';
+import { LogOut, User as UserIcon, LayoutDashboard, BrainCircuit, BarChart3 } from 'lucide-react';
 
 export default function AppHeader() {
   const { user, loading } = useAuth();
@@ -69,6 +70,10 @@ export default function AppHeader() {
                 <DropdownMenuItem onClick={() => router.push('/profile')}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/analytics')}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  <span>Analytics</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>

@@ -12,6 +12,13 @@ interface TaskListProps {
   onDeleteTask: (taskId: string) => void;
 }
 
+const statusOrder: Record<Task['status'], number> = {
+  working: 1,
+  planned: 2,
+  thought: 3,
+  done: 4,
+};
+
 export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskListProps) {
   if (tasks.length === 0) {
     return (
@@ -26,12 +33,12 @@ export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskList
     );
   }
 
-  // Sorting: 'done' tasks last, others by order.
-  // 'thought' and 'planned' will be treated similarly for sorting before 'done'.
+  // Sort tasks: by status order, then by their original 'order' field.
   const sortedTasks = [...tasks].sort((a, b) => {
-    if (a.status === 'done' && b.status !== 'done') return 1;
-    if (a.status !== 'done' && b.status === 'done') return -1;
-    return a.order - b.order; // Original order for non-done tasks
+    if (statusOrder[a.status] !== statusOrder[b.status]) {
+      return statusOrder[a.status] - statusOrder[b.status];
+    }
+    return a.order - b.order;
   });
 
   return (

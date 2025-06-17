@@ -1,11 +1,11 @@
 
 import { db } from './config';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp, getDocs } from 'firebase/firestore';
 import type { Task } from '@/types/task';
 
 export interface TaskData {
   title: string;
-  status: 'thought' | 'planned' | 'done';
+  status: 'thought' | 'planned' | 'working' | 'done';
   order: number;
   notes?: string;
   date: string; // YYYY-MM-DD
@@ -16,25 +16,29 @@ export interface TaskData {
 
 // Get tasks for a specific date
 export const getTasksForDate = (
-  userIdAuth: string, // Renamed to avoid conflict with task.userId
+  userIdAuth: string, 
   dateString: string,
   callback: (tasks: Task[]) => void,
   onError: (error: Error) => void
 ) => {
+  if (!userIdAuth) {
+    onError(new Error("User ID is not available. Cannot fetch tasks."));
+    return () => {}; // Return an empty unsubscribe function
+  }
   const tasksRef = collection(db, `users/${userIdAuth}/tasks`);
   const q = query(tasksRef, where('date', '==', dateString), orderBy('order', 'asc'));
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
     const tasks: Task[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data() as TaskData; // Cast to ensure type safety
+    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap to avoid conflict
+      const data = docSnap.data() as TaskData; 
       tasks.push({
-        id: doc.id,
+        id: docSnap.id,
         title: data.title,
         status: data.status,
         order: data.order,
         notes: data.notes,
-        userId: data.userId, // Ensure this is coming from the document
+        userId: data.userId, 
         createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate().toISOString() || new Date().toISOString(),
         date: data.date,
@@ -46,15 +50,16 @@ export const getTasksForDate = (
     onError(error);
   });
 
-  return unsubscribe; // Return the unsubscribe function to be called on component unmount
+  return unsubscribe; 
 };
 
 // Add a new task
 export const addTask = async (userIdAuth: string, taskData: Pick<TaskData, 'title' | 'notes' | 'date' | 'order'>) => {
+  if (!userIdAuth) throw new Error("User ID is not available. Cannot add task.");
   const tasksRef = collection(db, `users/${userIdAuth}/tasks`);
   await addDoc(tasksRef, {
     ...taskData,
-    userId: userIdAuth, // Explicitly set userId from auth
+    userId: userIdAuth, 
     status: 'thought', // Default status
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -63,6 +68,7 @@ export const addTask = async (userIdAuth: string, taskData: Pick<TaskData, 'titl
 
 // Update an existing task
 export const updateTask = async (userIdAuth: string, taskId: string, updates: Partial<Omit<TaskData, 'createdAt' | 'userId'>>) => {
+  if (!userIdAuth) throw new Error("User ID is not available. Cannot update task.");
   const taskDocRef = doc(db, `users/${userIdAuth}/tasks/${taskId}`);
   await updateDoc(taskDocRef, {
     ...updates,
@@ -72,41 +78,43 @@ export const updateTask = async (userIdAuth: string, taskId: string, updates: Pa
 
 // Delete a task
 export const deleteTask = async (userIdAuth: string, taskId: string) => {
+  if (!userIdAuth) throw new Error("User ID is not available. Cannot delete task.");
   const taskDocRef = doc(db, `users/${userIdAuth}/tasks/${taskId}`);
   await deleteDoc(taskDocRef);
 };
 
 
-// Fetch all tasks for analytics (example, might need date range)
-export const getAllUserTasks = async (
+// Fetch tasks for a date range (for analytics)
+export const getTasksForDateRange = async (
   userIdAuth: string,
-  callback: (tasks: Task[]) => void,
-  onError: (error: Error) => void
-) => {
+  startDate: string, // YYYY-MM-DD
+  endDate: string    // YYYY-MM-DD
+): Promise<Task[]> => {
+  if (!userIdAuth) throw new Error("User ID is not available. Cannot fetch tasks for range.");
   const tasksRef = collection(db, `users/${userIdAuth}/tasks`);
-  const q = query(tasksRef, orderBy('createdAt', 'desc')); // Order as needed
+  const q = query(
+    tasksRef,
+    where('date', '>=', startDate),
+    where('date', '<=', endDate),
+    orderBy('date', 'asc'),
+    orderBy('order', 'asc') 
+  );
 
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const tasks: Task[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data() as TaskData;
-      tasks.push({
-        id: doc.id,
-        title: data.title,
-        status: data.status,
-        order: data.order,
-        notes: data.notes,
-        userId: data.userId,
-        createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-        updatedAt: data.updatedAt?.toDate().toISOString() || new Date().toISOString(),
-        date: data.date,
-      });
+  const querySnapshot = await getDocs(q);
+  const tasks: Task[] = [];
+  querySnapshot.forEach((docSnap) => {
+    const data = docSnap.data() as TaskData;
+    tasks.push({
+      id: docSnap.id,
+      title: data.title,
+      status: data.status,
+      order: data.order,
+      notes: data.notes,
+      userId: data.userId,
+      createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+      updatedAt: data.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+      date: data.date,
     });
-    callback(tasks);
-  }, (error) => {
-    console.error("Error fetching all tasks: ", error);
-    onError(error);
   });
-
-  return unsubscribe;
+  return tasks;
 };

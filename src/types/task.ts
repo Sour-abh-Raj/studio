@@ -2,7 +2,7 @@
 export interface Task {
   id: string;
   title: string;
-  status: 'thought' | 'planned' | 'done';
+  status: 'thought' | 'planned' | 'working' | 'done';
   order: number;
   notes?: string;
   userId: string;
