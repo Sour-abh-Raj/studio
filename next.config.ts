@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      { // Allow Firebase Storage images (for user avatars)
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com', 
+      },
+      { // Allow Google user content images (for user avatars from Google Sign In)
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      }
     ],
   },
 };
