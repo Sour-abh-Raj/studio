@@ -1,3 +1,4 @@
+
 "use client";
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -6,7 +7,7 @@ import type { Task } from '@/types/task';
 import TaskList from '@/components/tasks/task-list';
 import AddTask from '@/components/tasks/add-task';
 import { getTasksForDate, addTask, updateTask, deleteTask, TaskData } from '@/lib/firebase/firestore';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +38,7 @@ export default function HomePage() {
         setIsLoadingTasks(false);
       }, (error) => {
         console.error("Error fetching tasks:", error);
-        toast({ title: "Error", description: "Failed to fetch tasks.", variant: "destructive" });
+        toast({ title: "Error fetching tasks", description: error.message, variant: "destructive" });
         setIsLoadingTasks(false);
       });
       return () => unsubscribe();
@@ -48,22 +49,24 @@ export default function HomePage() {
     if (!user) return;
     const dateString = getFormattedDate(currentDate);
     try {
-      await addTask(user.uid, { title, notes: notes || '', status: 'pending', date: dateString, order: tasks.length });
+      // userId is now handled by the addTask function using the authenticated user's UID
+      // status is also defaulted by addTask
+      await addTask(user.uid, { title, notes: notes || '', date: dateString, order: tasks.length });
       toast({ title: "Success", description: "Task added successfully." });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding task:", error);
-      toast({ title: "Error", description: "Failed to add task.", variant: "destructive" });
+      toast({ title: "Error adding task", description: error.message, variant: "destructive" });
     }
   };
 
-  const handleUpdateTask = async (taskId: string, updates: Partial<TaskData>) => {
+  const handleUpdateTask = async (taskId: string, updates: Partial<Omit<TaskData, 'createdAt' | 'userId'>>) => {
     if (!user) return;
     try {
       await updateTask(user.uid, taskId, updates);
       toast({ title: "Success", description: "Task updated successfully." });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating task:", error);
-      toast({ title: "Error", description: "Failed to update task.", variant: "destructive" });
+      toast({ title: "Error updating task", description: error.message, variant: "destructive" });
     }
   };
 
@@ -72,14 +75,22 @@ export default function HomePage() {
     try {
       await deleteTask(user.uid, taskId);
       toast({ title: "Success", description: "Task deleted successfully." });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting task:", error);
-      toast({ title: "Error", description: "Failed to delete task.", variant: "destructive" });
+      toast({ title: "Error deleting task", description: error.message, variant: "destructive" });
     }
   };
 
   const handleExportTasks = () => {
-    const dataStr = JSON.stringify(tasks, null, 2);
+    const dataStr = JSON.stringify(tasks.map(task => ({
+      title: task.title,
+      status: task.status,
+      notes: task.notes,
+      date: task.date,
+      order: task.order,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt
+    })), null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
     const exportFileDefaultName = `tasks-${getFormattedDate(currentDate)}.json`;
@@ -92,7 +103,7 @@ export default function HomePage() {
   };
 
   if (authLoading || (!user && !authLoading)) {
-    return <div className="flex items-center justify-center h-[calc(100vh-10rem)]"><p>Loading tasks...</p></div>;
+    return <div className="flex items-center justify-center h-[calc(100vh-10rem)]"><p>Loading page...</p></div>;
   }
 
   return (

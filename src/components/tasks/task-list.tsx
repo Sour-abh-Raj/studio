@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Task } from '@/types/task';
@@ -7,14 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface TaskListProps {
   tasks: Task[];
-  onUpdateTask: (taskId: string, updates: Partial<TaskData>) => void;
+  onUpdateTask: (taskId: string, updates: Partial<Omit<TaskData, 'createdAt' | 'userId'>>) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
 export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskListProps) {
   if (tasks.length === 0) {
     return (
-      <Card className="text-center py-10 shadow-sm">
+      <Card className="text-center py-10 shadow-sm border-dashed border-muted-foreground/30">
         <CardHeader>
           <CardTitle className="text-xl font-headline text-muted-foreground">No tasks for today!</CardTitle>
         </CardHeader>
@@ -25,15 +26,16 @@ export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskList
     );
   }
 
-  // Simple sorting: pending first, then by order. Could be more complex.
+  // Sorting: 'done' tasks last, others by order.
+  // 'thought' and 'planned' will be treated similarly for sorting before 'done'.
   const sortedTasks = [...tasks].sort((a, b) => {
-    if (a.status === 'pending' && b.status === 'completed') return -1;
-    if (a.status === 'completed' && b.status === 'pending') return 1;
-    return a.order - b.order;
+    if (a.status === 'done' && b.status !== 'done') return 1;
+    if (a.status !== 'done' && b.status === 'done') return -1;
+    return a.order - b.order; // Original order for non-done tasks
   });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {sortedTasks.map((task) => (
         <TaskItem
           key={task.id}
