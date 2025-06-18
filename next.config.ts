@@ -1,15 +1,21 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 import withPWAInit from 'next-pwa';
+
+const isDev = process.env.NODE_ENV === 'development';
+const repoName = 'studio'; // Your GitHub repo name
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development', // Disable PWA in development
+  disable: isDev, // Disable PWA in development
   register: true,
   skipWaiting: true,
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'export', // Required for GitHub Pages (static export)
+  basePath: isDev ? '' : `/${repoName}`, // GitHub Pages needs this
+  assetPrefix: isDev ? '' : `/${repoName}`, // Also needed for static assets
+
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -17,6 +23,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true, // Required for static export with next/image
     remotePatterns: [
       {
         protocol: 'https',
@@ -24,14 +31,14 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      { // Allow Firebase Storage images (for user avatars)
+      {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com', 
+        hostname: 'firebasestorage.googleapis.com',
       },
-      { // Allow Google user content images (for user avatars from Google Sign In)
+      {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
-      }
+      },
     ],
   },
 };
